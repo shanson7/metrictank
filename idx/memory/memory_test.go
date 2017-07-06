@@ -321,6 +321,55 @@ func TestDeleteNodeWith100kChildren(t *testing.T) {
 	})
 }
 
+func TestEmptyNodes(t *testing.T) {
+	ix := New()
+	ix.Init()
+
+	var data *schema.MetricData
+	var key string
+	for i := 1; i <= 10000; i++ {
+		key = fmt.Sprintf(".df.%d.some.metric.%d", i/10, i%10)
+		data = &schema.MetricData{
+			Name:     key,
+			Metric:   key,
+			OrgId:    1,
+			Interval: 10,
+		}
+		data.SetId()
+		ix.AddOrUpdate(data, 1)
+	}
+	for i := 1; i <= 10000; i++ {
+		key = fmt.Sprintf("some.%d.metric.%d", i/10, i%10)
+		data = &schema.MetricData{
+			Name:     key,
+			Metric:   key,
+			OrgId:    1,
+			Interval: 10,
+		}
+		data.SetId()
+		ix.AddOrUpdate(data, 1)
+	}
+
+	Convey("Should be able to handle empty nodes", t, func() {
+		Convey("series should not be present in searches", func() {
+			found, err := ix.Find(1, "a.b.c", 0)
+			So(err, ShouldBeNil)
+			So(found, ShouldHaveLength, 0)
+			found, err = ix.Find(1, "a.b.c.d", 0)
+			So(err, ShouldBeNil)
+			So(found, ShouldHaveLength, 0)
+		})
+		Convey("series should be present in searches", func() {
+			found, err := ix.Find(1, ".df.1.some.metric.1", 0)
+			So(err, ShouldBeNil)
+			So(found, ShouldHaveLength, 1)
+			found, err = ix.Find(1, "some.1.metric.1", 0)
+			So(err, ShouldBeNil)
+			So(found, ShouldHaveLength, 1)
+		})
+	})
+}
+
 func TestMixedBranchLeaf(t *testing.T) {
 	ix := New()
 	ix.Init()
